@@ -1,0 +1,185 @@
+---
+title: "tution_cost"
+author: "Gerry"
+date: "2025-05-29"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Explore data
+
+```{r}
+library(tidyverse)
+
+# Load tuition cost data
+tuition_cost <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-03-10/tuition_cost.csv')
+
+# Load diversity data
+diversity_raw <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-03-10/diversity_school.csv')
+
+diversity_school <- diversity_raw %>% 
+  filter(category == "Total Minority") %>% 
+  mutate(total_minority = enrollment / total_enrollment)
+
+diversity_school
+```
+
+```{r}
+diversity_school %>% 
+  ggplot(aes(total_minority)) +
+  geom_histogram(alpha = 0.7)
+```
+
+```{r}
+university_df <-
+  diversity_school %>% 
+  transmute(diversity = case_when(total_minority > 0.3 ~ "high",
+                                  TRUE ~ "low"),
+            name, state,
+            total_enrollment) %>% 
+  inner_join(tuition_cost %>% 
+  select(name, type, degree_length,
+         in_state_tuition:out_of_state_total)) %>% 
+  left_join(tibble(state = state.name, region = state.region)) %>% 
+  select(-name, -state) %>% 
+  mutate_if(is_character, factor)
+```
+
+```{r}
+# Visualization 1: In-State Tuition by University Type and Diversity (Faceted by Region)
+university_df %>% 
+  ggplot(aes(x = type, y = in_state_tuition, fill = diversity)) +
+  geom_boxplot() +
+  facet_wrap(~region) +  # Fixed: Replaced "-region" with "~region"
+  scale_y_continuous(labels = dollar_format()) +  # Format y-axis as currency
+  labs(
+    title = "In-State Tuition Costs by University Type and Diversity",
+    x = "University Type",
+    y = "In-State Tuition ($)",
+    fill = "Diversity Level"
+  ) +
+  theme_minimal()
+
+# Visualization 2: Total Enrollment by University Type (Log Scale)
+university_df %>% 
+  ggplot(aes(x = type, y = total_enrollment, fill = diversity)) +
+  geom_boxplot() +
+  scale_y_log10(labels = comma) +  # Log scale with readable labels
+  labs(
+    title = "Total Enrollment by University Type (Log Scale)",
+    x = "University Type",
+    y = "Total Enrollment (log10)",
+    fill = "Diversity Level"
+  ) +
+  theme_minimal()
+```
+
+## Building Models with recipes
+```{r}
+library(tidymodels)
+set.seed(123)
+uni_split <-
+  initial_split(university_df, strata = diversity) # Splitting with the outcome vaurable
+uni_split
+
+uni_train <- training(university_split)
+uni_test <- testing(university_split)
+
+
+#Data Preprocessing
+uni_rec <- recipe(diversity ~. ,data = uni_train) %>% 
+    step_corr(all_numeric()) %>% 
+    step_dummy(all_nominal(), -all_outcomes()) %>% 
+    step_zv(all_numeric()) %>% 
+    step_normalize(all_numeric()) %>% 
+    prep() 
+uni_rec
+
+juice(uni_rec)
+```
+
+# Setting up the models 
+```{r}
+glm_spec <- logistic_reg() %>% 
+  set_engine('glm')
+
+glm_fit <- glm_spec %>% 
+  fit(diversity ~ .,data = juice(uni_rec))
+glm_fit
+
+knn_spec <- nearest_neighbor() %>% 
+  set_engine('kknn') %>% 
+  set_mode("classification")
+
+knn_fit <- knn_spec %>% 
+  fit(diversity ~ .,data = juice(uni_rec))
+knn_fit
+
+tree_spec <- decision_tree() %>% 
+  set_engine('rpart') %>% 
+  set_mode("classification")
+
+tree_fit <- tree_spec %>% 
+  fit(diversity ~ .,data = juice(uni_rec))
+tree_fit
+```
+
+
+## Evaluate models with resampling
+```{r}
+set.sedd(123)
+folds <- vfold_cv(juice(uni_rec), strata = diversity)
+set.seed(234)
+glm_rs <- 
+  glm_spec %>% 
+  fit_resamples(diversity ~. ,
+                folds, metrics = metric_set(roc_auc, sens, spec),
+                control = control_resamples(save_pred = TRUE))
+collect_metrics(glm_rs)
+
+set.seed(234)
+knn_rs <- 
+  knn_spec %>% 
+  fit_resamples(diversity ~. ,
+                folds, metrics = metric_set(roc_auc, sens, spec),
+                control = control_resamples(save_pred = TRUE))
+collect_metrics(knn_rs)
+
+set.sedd(234)
+tree_rs <- 
+  tree_spec %>% 
+  fit_resamples(diversity ~. ,
+                folds, metrics = metric_set(roc_auc, sens, spec),
+                control = control_resamples(save_pred = TRUE))
+collect_metrics(tree_rs)
+```
+
+
+```{r}
+glm_rs %>% 
+  unnest(.predictions) %>% 
+  mutate(model = "glm") %>% 
+  bind_rows(tree_rs %>%
+              unnest(.predictions) %>% 
+              mutate(model = "tree")) %>% 
+  bind_rows(knn_rs %>%
+              unnest(.predictions) %>% 
+              mutate(model = "knn")) %>%
+  group_by(model) %>% 
+  roc_curve(diversity, .pred_high) %>% 
+  autoplot()
+```
+
+
+
+
+
+
+
+
+
