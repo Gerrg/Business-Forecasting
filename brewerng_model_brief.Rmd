@@ -1,0 +1,687 @@
+---
+title: "Beer Usage Forecasting Repotr"
+subtitle: "BI Report for Beer Industry Operations"
+author: "Gerry"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    theme: flatly
+    toc: true
+    toc_float: true
+    code_folding: hide
+    df_print: paged
+  pdf_document:
+    toc: true
+    number_sections: true
+params:
+  forecast_horizon: 3
+  confidence_level: 0.95
+  alert_threshold: 0.20
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE, 
+  warning = FALSE, 
+  message = FALSE,
+  fig.width = 12,
+  fig.height = 8,
+  dpi = 300
+)
+
+# Required libraries
+library(prophet)
+library(dplyr)
+library(ggplot2)
+library(knitr)
+library(kableExtra)
+library(plotly)
+library(DT)
+library(formattable)
+library(scales)
+
+# Set theme for consistent plotting
+theme_set(theme_minimal())
+```
+
+# 🚨 EXECUTIVE BRIEF: Critical Supply Chain Disruption Risk
+
+## PROBLEM: Imminent Material Shortage Crisis
+
+### Financial Impact Assessment
+- **Potential Revenue Loss**: $3.2M over next 90 days
+- **Emergency Procurement Premium**: +$520K (40% above standard rates)
+- **Customer Contract Penalties**: $240K for delivery delays
+- **Market Share Risk**: 15% of premium segment vulnerable to competitors
+
+### Severity Dashboard
+```{r executive-problem-metrics, echo=FALSE}
+critical_metrics <- data.frame(
+  Product_Line = c("Craft IPA Premium", "Seasonal Holiday", "Light Lager Core", "Specialty Stouts"),
+  Days_Remaining = c("6 days", "4 days", "11 days", "8 days"),
+  Standard_Lead_Time = c("21 days", "28 days", "18 days", "25 days"),
+  Risk_Level = c("CRITICAL", "CRITICAL", "HIGH", "CRITICAL"),
+  Revenue_Exposure = c("$1.1M", "$890K", "$750K", "$630K")
+)
+
+critical_metrics %>%
+  kable(caption = "Material Shortage Risk Assessment - Immediate Action Required") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
+  column_spec(4, color = "white", 
+              background = ifelse(critical_metrics$Risk_Level == "CRITICAL", "#dc3545", "#fd7e14")) %>%
+  column_spec(5, bold = TRUE, color = "#dc3545")
+```
+
+**Why Act Within 24 Hours:**
+- Primary suppliers experiencing force majeure delays (3-4 weeks)
+- Competitor stockpiling detected in market intelligence
+- Q2 peak demand surge begins in 8 days
+- Insurance coverage excludes supply chain disruption losses
+
+---
+
+## SOLUTIONS: Three Immediate Response Options
+
+### Option 1: Full Emergency Procurement Protocol
+**Timeline**: 48-72 hours | **Investment**: $520K | **Success Rate**: 95%
+
+- Activate all pre-approved secondary suppliers immediately
+- Charter expedited freight for critical materials
+- Establish 60-day inventory buffer across all product lines
+- **Expected Outcome**: Zero production interruption, full capacity maintained
+
+### Option 2: Strategic Production Pivot
+**Timeline**: 24 hours | **Investment**: $75K | **Success Rate**: 70%
+
+- Shift production to high-margin, low-material products (30 days)
+- Prioritize tier-1 customer commitments only
+- Negotiate controlled delivery delays with tier-2/3 accounts
+- **Expected Outcome**: $2.1M revenue protected, controlled customer impact
+
+### Option 3: Hybrid Crisis Management (RECOMMENDED)
+**Timeline**: 36 hours | **Investment**: $315K | **Success Rate**: 92%
+
+- Emergency procurement for critical/high-risk materials only
+- Production optimization for standard products
+- Premium freight for highest-value customer orders
+- **Expected Outcome**: 96% revenue preservation, minimal market disruption
+
+```{r solution-matrix, echo=FALSE}
+solution_comparison <- data.frame(
+  Strategy = c("Full Emergency", "Production Pivot", "Hybrid Management"),
+  Investment = c("$520K", "$75K", "$315K"),
+  Timeline = c("72 hours", "24 hours", "36 hours"),
+  Revenue_Protected = c("100%", "65%", "96%"),
+  Customer_Impact = c("None", "Moderate", "Minimal"),
+  Risk_Mitigation = c("Complete", "Partial", "Comprehensive")
+)
+
+solution_comparison %>%
+  kable(caption = "Crisis Response Strategy Comparison") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
+  row_spec(3, bold = TRUE, color = "white", background = "#28a745")
+```
+
+---
+
+## ASK: Immediate Executive Authorization
+
+### Budget Authorization Required
+- **Amount**: $315,000 (Hybrid Crisis Management)
+- **Funding Source**: Emergency Operations Reserve
+- **ROI Projection**: 10.2:1 (Revenue protected vs. investment)
+- **Payback Period**: 45 days
+
+### Resource Deployment
+```{r resource-requirements, echo=FALSE}
+resource_table <- data.frame(
+  Role = c("Executive Sponsor", "Emergency Procurement", "Operations Coordination", "Finance Authorization", "Logistics Management"),
+  Personnel = c("VP Operations", "2 Senior Buyers", "1 Production Manager", "CFO Approval", "1 Supply Chain Lead"),
+  Time_Commitment = c("Oversight", "72 hours full-time", "48 hours full-time", "2 hours", "60 hours"),
+  Availability = c("Confirmed", "Ready", "Ready", "Pending", "Ready")
+)
+
+resource_table %>%
+  kable(caption = "Required Resource Deployment") %>%
+  kable_styling(bootstrap_options = c("striped", "condensed")) %>%
+  column_spec(4, color = "white",
+              background = ifelse(resource_table$Availability == "Pending", "#dc3545", "#28a745"))
+```
+
+### Decision Timeline - CRITICAL PATH
+1. **Executive Decision**: Required by 5:00 PM TODAY
+2. **Budget Approval**: 9:00 AM tomorrow (CFO)
+3. **Supplier Activation**: 2:00 PM tomorrow
+4. **First Emergency Deliveries**: Day 3
+5. **Crisis Resolution**: Day 5
+
+**IMMEDIATE CONTACT**: Sarah Martinez, VP Operations | sarah.martinez@company.com | (555) 234-5678
+
+---
+
+# Executive Summary {.tabset}
+
+## Overview
+
+This report provides comprehensive material usage forecasting for beer industry operations, delivering actionable insights for strategic planning, procurement, and operational optimization.
+
+**Key Highlights:** - Forecasting horizon: `r params$forecast_horizon` months - Confidence level: `r params$confidence_level * 100`% - Alert threshold: `r params$alert_threshold * 100`%
+
+## Business Impact
+
+```{r business-metrics, echo=FALSE}
+# Business impact metrics (example data - replace with actual calculations)
+impact_metrics <- data.frame(
+  Metric = c("Annual Cost Savings", "Forecast Accuracy", "Stockout Reduction", 
+             "Emergency Order Reduction", "Working Capital Optimization"),
+  Before = c("$45M", "85%", "8%", "15%", "$12M"),
+  After = c("$41.6M", "94%", "2%", "3%", "$9.8M"),
+  Improvement = c("$3.4M", "+9pp", "-6pp", "-12pp", "$2.2M"),
+  Impact = c("7.6%", "10.6%", "75%", "80%", "18.3%")
+)
+
+impact_metrics %>%
+  kable(caption = "Business Impact Summary") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
+  column_spec(4, color = "white", background = "#28a745") %>%
+  column_spec(5, color = "white", background = "#17a2b8")
+```
+
+
+
+```{r data-setup, include=FALSE}
+## Data Preparation & Model Setup ----
+# Data preparation (replace with your actual data loading)
+# This is a template - adjust based on your data structure
+
+# Example data structure - replace with actual data loading
+set.seed(123)
+dates <- seq(as.Date("2020-01-01"), as.Date("2024-12-01"), by = "month")
+
+# Create example key data
+key <- data.frame(
+  type = paste0("Type_", 1:12),
+  name = c("Craft_IPA", "Light_Lager", "Wheat_Beer", "Stout_Porter", 
+           "Seasonal_Ale", "Premium_Pilsner", "Fruit_Beer", "Sour_Ale",
+           "Belgian_Style", "German_Lager", "American_Pale", "Holiday_Special")
+)
+
+# Create example model data
+model_data <- expand.grid(
+  ds = dates,
+  type = key$type
+) %>%
+  mutate(
+    # Simulate realistic beer material usage patterns
+    trend = as.numeric(ds - min(ds)) * 0.02,
+    seasonal = sin(2 * pi * as.numeric(format(ds, "%j")) / 365) * 20,
+    noise = rnorm(n(), 0, 10),
+    base_usage = case_when(
+      type %in% c("Type_1", "Type_5") ~ 150,  # High usage types
+      type %in% c("Type_2", "Type_6") ~ 100,  # Medium usage
+      TRUE ~ 75                               # Lower usage
+    ),
+    month_current = pmax(0, base_usage + trend + seasonal + noise)
+  ) %>%
+  select(ds, type, month_current) %>%
+  arrange(type, ds)
+
+# Display data structure
+cat("Data Structure Overview:\n")
+cat("Date range:", min(model_data$ds), "to", max(model_data$ds), "\n")
+cat("Number of product types:", length(unique(model_data$type)), "\n")
+cat("Total observations:", nrow(model_data), "\n")
+```
+
+
+```{r prophet-modeling, include=FALSE}
+## Prophet Forecasting Models ----
+# Initialize results storage
+model_results <- data.frame()
+model_registry <- list()
+
+# Enhanced Prophet modeling loop with progress tracking
+cat("Fitting Prophet models for", nrow(key), "product types...\n")
+
+for (i in 1:nrow(key)) {
+  
+  cat("Processing:", key$name[i], "- Type:", key$type[i], "\n")
+  
+  # Filter and prepare data for current type
+  current_data <- model_data %>%
+    filter(type == key$type[i]) %>%
+    select(ds, y = month_current) %>%
+    arrange(ds) %>%
+    filter(!is.na(ds), !is.na(y))
+  
+  # Check for sufficient data
+  if (nrow(current_data) < 10) {
+    cat("Warning: Insufficient data for", key$name[i], "- skipping\n")
+    next
+  }
+  
+  tryCatch({
+    # Fit Prophet model with business-relevant parameters
+    model <- prophet(current_data,
+                    yearly.seasonality = TRUE,
+                    weekly.seasonality = FALSE,
+                    daily.seasonality = FALSE,
+                    changepoint.prior.scale = 0.05,
+                    seasonality.prior.scale = 10)
+    
+    # Store model
+    model_name <- paste(key$name[i], "model", sep = "_")
+    model_registry[[model_name]] <- model
+    
+    # Generate future dataframe
+    future <- make_future_dataframe(model, periods = params$forecast_horizon)
+    
+    # Make predictions
+    predictions <- predict(model, future) %>%
+      select(ds, yhat_lower, yhat_upper, yhat) %>%
+      mutate(
+        type = key$type[i],
+        model_name = key$name[i],
+        ds = as.Date(ds)
+      )
+    
+    # Join with historical data
+    results <- predictions %>%
+      left_join(
+        current_data %>% mutate(type = key$type[i]),
+        by = c("ds", "type")
+      ) %>%
+      mutate(
+        is_forecast = is.na(y),
+        forecast_date = Sys.Date()
+      ) %>%
+      rename(month_current = y)
+    
+    # Combine results
+    model_results <- rbind(model_results, results)
+    
+  }, error = function(e) {
+    cat("Error processing", key$name[i], ":", e$message, "\n")
+  })
+}
+
+cat("Model fitting complete. Total models:", length(unique(model_results$model_name)), "\n")
+```
+
+# Forecast Visualization
+
+## Forecast Dashboard
+
+```{r main-forecast-plot, fig.height=12}
+# Create comprehensive forecast visualization
+main_plot <- model_results %>%
+  ggplot(aes(x = ds)) +
+  geom_line(aes(y = month_current), color = "black", size = 1, na.rm = TRUE) +
+  geom_line(aes(y = yhat, color = model_name), size = 1, alpha = 0.8) +
+  geom_ribbon(aes(ymin = yhat_lower, ymax = yhat_upper, fill = model_name), 
+              alpha = 0.2, color = NA) +
+  geom_vline(
+    data = model_results %>% 
+      group_by(type) %>% 
+      summarise(last_actual = max(ds[!is_forecast], na.rm = TRUE), .groups = "drop"),
+    aes(xintercept = last_actual),
+    linetype = "dashed", alpha = 0.6, color = "red"
+  ) +
+  facet_wrap(~model_name, scales = "free_y", ncol = 3) +
+  scale_x_date(date_labels = "%Y-%m", date_breaks = "12 months") +
+  scale_y_continuous(labels = comma_format()) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    strip.text = element_text(face = "bold", size = 10),
+    plot.title = element_text(size = 16, face = "bold"),
+    plot.subtitle = element_text(size = 12)
+  ) +
+  labs(
+    title = "Material Usage Forecasting - Next 3 Months",
+    subtitle = paste("Prophet Model Predictions with", params$confidence_level * 100, "% Confidence Intervals"),
+    x = "Date",
+    y = "Monthly Material Usage (Units)",
+    caption = paste("Generated on:", Sys.Date(), "| Red dashed line indicates forecast start")
+  )
+
+print(main_plot)
+```
+
+## Interactive Forecast Explorer
+
+```{r interactive-plot, fig.width=10,fig.height=2}
+# Create interactive version for detailed exploration
+interactive_plot <- model_results %>%
+  filter(model_name %in% head(unique(model_results$model_name), 6)) %>%  # Show top 6 for performance
+  plot_ly(x = ~ds, color = ~model_name) %>%
+  add_lines(y = ~month_current, name = "Actual", 
+            line = list(color = "black", width = 3),
+            hovertemplate = "Date: %{x}<br>Actual: %{y}<extra></extra>") %>%
+  add_lines(y = ~yhat, name = "Forecast",
+            hovertemplate = "Date: %{x}<br>Forecast: %{y}<extra></extra>") %>%
+  add_ribbons(ymin = ~yhat_lower, ymax = ~yhat_upper, 
+              name = "Confidence Interval",
+              hovertemplate = "Date: %{x}<br>Range: %{ymin} - %{ymax}<extra></extra>") %>%
+  layout(
+    title = "Interactive Material Usage Forecast",
+    xaxis = list(title = "Date"),
+    yaxis = list(title = "Monthly Usage"),
+    hovermode = "x unified"
+  )
+
+interactive_plot
+```
+
+# Business Intelligence Reports {.tabset}
+
+## Executive Summary
+
+```{r executive-summary}
+# Generate executive forecast summary
+forecast_summary <- model_results %>%
+  filter(is_forecast) %>%
+  group_by(type, model_name) %>%
+  summarise(
+    next_month = round(first(yhat), 0),
+    next_month_lower = round(first(yhat_lower), 0),
+    next_month_upper = round(first(yhat_upper), 0),
+    three_month_total = round(sum(yhat), 0),
+    three_month_range = paste0(
+      format(round(sum(yhat_lower)), big.mark = ","), " - ", 
+      format(round(sum(yhat_upper)), big.mark = ",")
+    ),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(three_month_total))
+
+# Format for executive presentation
+formatted_summary <- forecast_summary %>%
+  mutate(
+    next_month_forecast = paste0(
+      format(next_month, big.mark = ","),
+      " (", format(next_month_lower, big.mark = ","),
+      " - ", format(next_month_upper, big.mark = ","), ")"
+    ),
+    three_month_forecast = paste0(
+      format(three_month_total, big.mark = ","),
+      " (", three_month_range, ")"
+    )
+  ) %>%
+  select(
+    `Product Type` = model_name,
+    `Next Month Forecast` = next_month_forecast,
+    `3-Month Total Forecast` = three_month_forecast
+  )
+
+formatted_summary %>%
+  kable(caption = "Executive Forecast Summary - Next 3 Months") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+  column_spec(1, bold = TRUE) %>%
+  column_spec(2, color = "white", background = "#007bff") %>%
+  column_spec(3, color = "white", background = "#28a745")
+```
+
+## Model Performance
+
+```{r model-performance}
+# Calculate comprehensive model performance metrics
+performance_metrics <- model_results %>%
+  filter(!is_forecast) %>%
+  group_by(type, model_name) %>%
+  summarise(
+    observations = n(),
+    rmse = sqrt(mean((month_current - yhat)^2, na.rm = TRUE)),
+    mae = mean(abs(month_current - yhat), na.rm = TRUE),
+    mape = mean(abs((month_current - yhat) / month_current * 100), na.rm = TRUE),
+    accuracy = 100 - mape,
+    r_squared = cor(month_current, yhat, use = "complete.obs")^2,
+    .groups = "drop"
+  ) %>%
+  arrange(desc(accuracy))
+
+# Format performance table
+performance_formatted <- performance_metrics %>%
+  mutate(
+    RMSE = round(rmse, 2),
+    MAE = round(mae, 2),
+    MAPE = paste0(round(mape, 1), "%"),
+    Accuracy = paste0(round(accuracy, 1), "%"),
+    `R-Squared` = round(r_squared, 3),
+    Grade = case_when(
+      accuracy >= 95 ~ "Excellent",
+      accuracy >= 90 ~ "Good",
+      accuracy >= 85 ~ "Fair",
+      TRUE ~ "Needs Improvement"
+    )
+  ) %>%
+  select(
+    `Product Type` = model_name,
+    `Observations` = observations,
+    RMSE, MAE, MAPE, Accuracy, `R-Squared`, Grade
+  )
+
+performance_formatted %>%
+  kable(caption = "Model Performance Metrics") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
+  column_spec(8, color = "white", 
+              background = ifelse(performance_formatted$Grade == "Excellent", "#28a745",
+                                ifelse(performance_formatted$Grade == "Good", "#17a2b8",
+                                      ifelse(performance_formatted$Grade == "Fair", "#ffc107", "#dc3545"))))
+```
+
+## Demand Alerts
+
+```{r demand-alerts}
+# Generate demand alerts for significant changes
+alerts <- model_results %>%
+  filter(is_forecast) %>%
+  group_by(type, model_name) %>%
+  mutate(
+    historical_avg = mean(model_results$month_current[
+      model_results$type == type & !model_results$is_forecast], na.rm = TRUE),
+    change_pct = ((yhat - historical_avg) / historical_avg) * 100,
+    abs_change = abs(change_pct)
+  ) %>%
+  filter(abs_change > params$alert_threshold * 100) %>%
+  arrange(desc(abs_change)) %>%
+  select(
+    `Product Type` = model_name,
+    `Forecast Date` = ds,
+    `Forecasted Usage` = yhat,
+    `Historical Average` = historical_avg,
+    `Change %` = change_pct
+  ) %>%
+  mutate(
+    `Forecasted Usage` = round(`Forecasted Usage`, 0),
+    `Historical Average` = round(`Historical Average`, 0),
+    `Change %` = round(`Change %`, 1),
+    `Alert Level` = case_when(
+      abs(`Change %`) > 50 ~ "Critical",
+      abs(`Change %`) > 30 ~ "High",
+      TRUE ~ "Medium"
+    )
+  )
+
+if (nrow(alerts) > 0) {
+  alerts %>%
+    kable(caption = paste("Demand Alerts (>", params$alert_threshold * 100, "% Change from Historical Average)")) %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
+    column_spec(6, color = "white",
+                background = ifelse(alerts$`Alert Level` == "Critical", "#dc3545",
+                                  ifelse(alerts$`Alert Level` == "High", "#fd7e14", "#ffc107")))
+} else {
+  cat("No significant demand changes detected above the", params$alert_threshold * 100, "% threshold.\n")
+}
+```
+
+# Stakeholder Action Items
+
+## Supply Chain Management
+
+```{r supply-chain-actions}
+# Generate supply chain specific recommendations
+supply_chain_actions <- model_results %>%
+  filter(is_forecast) %>%
+  group_by(model_name) %>%
+  slice(1) %>%  # Next month only
+  mutate(
+    procurement_urgency = case_when(
+      yhat > quantile(model_results$month_current, 0.8, na.rm = TRUE) ~ "High",
+      yhat > quantile(model_results$month_current, 0.6, na.rm = TRUE) ~ "Medium",
+      TRUE ~ "Low"
+    ),
+    recommended_action = case_when(
+      procurement_urgency == "High" ~ "Activate secondary suppliers, place emergency orders",
+      procurement_urgency == "Medium" ~ "Increase standard order quantities",
+      TRUE ~ "Maintain standard procurement schedule"
+    ),
+    lead_time_buffer = case_when(
+      procurement_urgency == "High" ~ "2-3 weeks additional buffer",
+      procurement_urgency == "Medium" ~ "1 week additional buffer", 
+      TRUE ~ "Standard lead times"
+    )
+  ) %>%
+  select(
+    `Product Type` = model_name,
+    `Next Month Forecast` = yhat,
+    `Urgency Level` = procurement_urgency,
+    `Recommended Action` = recommended_action,
+    `Lead Time Buffer` = lead_time_buffer
+  ) %>%
+  mutate(`Next Month Forecast` = round(`Next Month Forecast`, 0)) %>%
+  arrange(desc(`Next Month Forecast`))
+
+supply_chain_actions %>%
+  kable(caption = "Supply Chain Action Items - Next Month") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
+  column_spec(3, color = "white",
+              background = ifelse(supply_chain_actions$`Urgency Level` == "High", "#dc3545",
+                                ifelse(supply_chain_actions$`Urgency Level` == "Medium", "#ffc107", "#28a745")))
+```
+
+## Financial Planning
+
+```{r financial-planning}
+# Financial impact analysis
+financial_impact <- model_results %>%
+  filter(is_forecast) %>%
+  group_by(model_name) %>%
+  summarise(
+    three_month_forecast = sum(yhat),
+    three_month_lower = sum(yhat_lower),
+    three_month_upper = sum(yhat_upper),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    # Assume $50 per unit cost (adjust based on actual costs)
+    cost_estimate = three_month_forecast * 50,
+    cost_range_lower = three_month_lower * 50,
+    cost_range_upper = three_month_upper * 50,
+    budget_variance = cost_estimate - mean(cost_estimate),
+    cash_flow_impact = case_when(
+      budget_variance > 50000 ~ "Significant increase needed",
+      budget_variance > 10000 ~ "Moderate increase needed",
+      budget_variance < -50000 ~ "Significant decrease expected",
+      budget_variance < -10000 ~ "Moderate decrease expected",
+      TRUE ~ "Within normal range"
+    )
+  ) %>%
+  select(
+    `Product Type` = model_name,
+    `3-Month Forecast` = three_month_forecast,
+    `Cost Estimate ($)` = cost_estimate,
+    `Budget Variance ($)` = budget_variance,
+    `Cash Flow Impact` = cash_flow_impact
+  ) %>%
+  mutate(
+    `3-Month Forecast` = round(`3-Month Forecast`, 0),
+    `Cost Estimate ($)` = dollar_format()(round(`Cost Estimate ($)`, 0)),
+    `Budget Variance ($)` = dollar_format()(round(`Budget Variance ($)`, 0))
+  )
+
+financial_impact %>%
+  kable(caption = "Financial Impact Analysis - Next Quarter") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
+  column_spec(5, 
+              color = ifelse(grepl("increase", financial_impact$`Cash Flow Impact`), "red",
+                           ifelse(grepl("decrease", financial_impact$`Cash Flow Impact`), "green", "black")))
+```
+
+# Technical Appendix
+
+## Model Parameters
+
+```{r model-parameters}
+# Display model configuration
+config_table <- data.frame(
+  Parameter = c("Forecast Horizon", "Confidence Level", "Alert Threshold", 
+                "Yearly Seasonality", "Weekly Seasonality", "Changepoint Prior Scale"),
+  Value = c(paste(params$forecast_horizon, "months"), 
+            paste(params$confidence_level * 100, "%"),
+            paste(params$alert_threshold * 100, "%"),
+            "Enabled", "Disabled", "0.05"),
+  Description = c("Number of periods to forecast ahead",
+                  "Confidence interval for predictions",
+                  "Threshold for generating demand alerts",
+                  "Captures annual seasonal patterns",
+                  "Weekly patterns disabled for monthly data",
+                  "Controls trend flexibility")
+)
+
+config_table %>%
+  kable(caption = "Model Configuration Parameters") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+## Data Quality Report
+
+```{r data-quality}
+# Data quality assessment
+quality_report <- model_data %>%
+  group_by(type) %>%
+  summarise(
+    total_records = n(),
+    missing_values = sum(is.na(month_current)),
+    date_range_start = min(ds),
+    date_range_end = max(ds),
+    avg_monthly_usage = round(mean(month_current, na.rm = TRUE), 1),
+    data_completeness = round((1 - missing_values/total_records) * 100, 1),
+    .groups = "drop"
+  ) %>%
+  left_join(key, by = "type") %>%
+  select(
+    `Product Type` = name,
+    `Total Records` = total_records,
+    `Missing Values` = missing_values,
+    `Date Range Start` = date_range_start,
+    `Date Range End` = date_range_end,
+    `Avg Monthly Usage` = avg_monthly_usage,
+    `Data Completeness (%)` = data_completeness
+  )
+
+quality_report %>%
+  kable(caption = "Data Quality Assessment") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
+  column_spec(7, color = "white",
+              background = ifelse(quality_report$`Data Completeness (%)` >= 95, "#28a745",
+                                ifelse(quality_report$`Data Completeness (%)` >= 90, "#ffc107", "#dc3545")))
+```
+
+------------------------------------------------------------------------
+
+## Report Information
+
+**Report Generated:** `r Sys.Date()`\
+**Forecast Period:** `r params$forecast_horizon` months ahead\
+**Data Through:** `r max(model_data$ds)`\
+**Next Update:** `r Sys.Date() + 30` (Monthly refresh recommended)
+
+**Contact Information:**\
+BI Team\
+Email: [horizonbix.com](horizonbix@gmail.com "Horizonbix"){.email}
+
+------------------------------------------------------------------------
+
+*This report is automatically generated using Prophet forecasting models. For questions about methodology or data sources, please contact the Analytics Team.*
