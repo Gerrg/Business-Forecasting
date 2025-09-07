@@ -30,4 +30,4 @@ Created automated forecasting system using Prophet algorithm analyzing 12 produc
 - `/outputs/` - Crisis management recommendations and cost scenarios
 
 ---
-*Demonstrates advanced time series forecasting: converting complex demand patterns into actionable supply chain strategy for brewery operations.*
+*Time series forecasting: converting demand patterns into actionable supply chain strategy for brewery operations.*
