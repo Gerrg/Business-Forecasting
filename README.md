@@ -1,3 +1,5 @@
+<img width="1266" height="723" alt="image" src="https://github.com/user-attachments/assets/004241eb-11e1-4c38-b2c0-12a95306e912" />
+
 # Beer Demand Forecasting Analytics
 
 **Goal**: Built R-based forecasting system for brewery operations that identified $3.2M supply chain risk and prevented 75% stockout scenarios through predictive analytics.
