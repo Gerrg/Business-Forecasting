@@ -1,4 +1,4 @@
-<img width="1266" height="723" alt="image" src="https://github.com/user-attachments/assets/004241eb-11e1-4c38-b2c0-12a95306e912" />
+<img width="882" height="305" alt="image" src="https://github.com/user-attachments/assets/74a82cef-4b37-4dc6-94e4-292752df3763" />
 
 # Beer Demand Forecasting Analytics
 
