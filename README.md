@@ -1,10 +1,9 @@
 # Beer Demand Forecasting Analytics
-<img width="882" height="305" alt="image" src="https://github.com/user-attachments/assets/74a82cef-4b37-4dc6-94e4-292752df3763" />
-
 **Goal**: Built R-based forecasting system for brewery operations that identified $3.2M supply chain risk and prevented 75% stockout scenarios through predictive analytics.
 
 ## Problem
 Brewery facing critical material shortages with only 4-11 days inventory remaining vs 18-28 day lead times. Risk of $3.2M revenue loss and 15% market share erosion without immediate action.
+<img width="882" height="305" alt="image" src="https://github.com/user-attachments/assets/74a82cef-4b37-4dc6-94e4-292752df3763" />
 
 ## Solution
 Created automated forecasting system using Prophet algorithm analyzing 12 product lines:
